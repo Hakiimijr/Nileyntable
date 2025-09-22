@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="so">
+<head>
+<meta charset="UTF-8">
+<title>Jadwalka Iskuulka - Secure Password</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+body {background: #f8f9fa; font-family: Arial, sans-serif; margin:0; padding:0;}
+.logo {text-align:center; margin-bottom:15px;}
+.logo img {max-height: 80px;}
+.schedule-row {display:flex; flex-wrap:wrap; margin-bottom:5px; align-items:center; transition: all 0.2s;}
+.subject-box, .teacher-box, .time-box {
+  padding:6px 10px; margin:2px; border-radius:6px;
+  color:white; font-weight:bold; flex:1; text-align:center; transition: all 0.2s;
+  font-size:0.9rem;
+}
+.subject-actions button {margin-left:5px; padding:2px 6px;}
+.day-column {min-height:50px; border:1px solid #ddd; border-radius:6px; padding:5px; background:white; box-shadow:0 1px 3px rgba(0,0,0,0.1);}
+.day-title {text-align:center; font-weight:bold; margin-bottom:5px; font-size:1rem;}
+.card input, .card select {transition: all 0.2s;}
+@media print {
+  @page {size: A4 landscape; margin:10mm;}
+  .no-print {display:none !important;}
+  body {background:white; margin:0; padding:0;}
+  .container-fluid {width:100%; padding:0;}
+  .row {margin:0; flex-wrap:nowrap;}
+  .col {flex:1; padding:2px;}
+  .subject-box, .teacher-box, .time-box {font-size:0.85rem; padding:4px;}
+}
+.modal-backdrop {opacity:0.8 !important;}
+</style>
+</head>
+<body class="container-fluid py-3">
+
+<!-- Password Modal -->
+<div class="modal fade" id="passwordModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Fadlan geli password-ka</h5>
+      </div>
+      <div class="modal-body">
+        <input type="password" id="passwordInput" class="form-control" placeholder="Password">
+        <div id="errorMsg" class="text-danger mt-2" style="display:none;">Password khaldan!</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="submitPassword" class="btn btn-primary">Geli</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Jadwalka Content -->
+<div id="mainContent" style="display:none;">
+
+<!-- Logo -->
+<div class="logo">
+  <img src="nileyn.png" alt="Logo Iskuul">
+  <h4>📚 Jadwalka Iskuulka</h4>
+</div>
+
+<!-- Input Form -->
+<div class="card p-3 mb-3 no-print shadow-sm">
+  <h5>➕ Ku dar Maado, Macalin & Waqti</h5>
+  <div class="row g-2">
+    <div class="col-md-2"><input type="text" id="subject" class="form-control" placeholder="Maadada"></div>
+    <div class="col-md-2"><input type="text" id="teacher" class="form-control" placeholder="Macalin"></div>
+    <div class="col-md-2">
+      <select id="day" class="form-select">
+        <option value="">Maalinta</option>
+        <option>Sabti</option>
+        <option>Axad</option>
+        <option>Isniin</option>
+        <option>Talaado</option>
+        <option>Arbaco</option>
+      </select>
+    </div>
+    <div class="col-md-2"><input type="time" id="start" class="form-control" placeholder="Bilow"></div>
+    <div class="col-md-2"><input type="time" id="end" class="form-control" placeholder="Dhammaad"></div>
+    <div class="col-md-2"><button onclick="addSchedule()" class="btn btn-success w-100">➕ Ku dar</button></div>
+  </div>
+</div>
+
+<!-- Jadwalka Columns -->
+<div class="row text-center" id="scheduleContainer">
+  <div class="col">
+    <div class="day-column"><div class="day-title">Sabti</div><div id="Sabti"></div></div>
+  </div>
+  <div class="col">
+    <div class="day-column"><div class="day-title">Axad</div><div id="Axad"></div></div>
+  </div>
+  <div class="col">
+    <div class="day-column"><div class="day-title">Isniin</div><div id="Isniin"></div></div>
+  </div>
+  <div class="col">
+    <div class="day-column"><div class="day-title">Talaado</div><div id="Talaado"></div></div>
+  </div>
+  <div class="col">
+    <div class="day-column"><div class="day-title">Arbaco</div><div id="Arbaco"></div></div>
+  </div>
+</div>
+
+<div class="text-center mt-3 no-print">
+  <button class="btn btn-primary" onclick="window.print()">🖨️ Daabac Jadwalka</button>
+</div>
+
+</div> <!-- End mainContent -->
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const correctPassword = ["npss2","Npss2"];
+
+const passwordModal = new bootstrap.Modal(document.getElementById('passwordModal'), {});
+passwordModal.show();
+
+document.getElementById('submitPassword').addEventListener('click', checkPassword);
+document.getElementById('passwordInput').addEventListener('keyup', function(e){
+  if(e.key === 'Enter') checkPassword();
+});
+
+function checkPassword(){
+  const input = document.getElementById('passwordInput').value;
+  if(correctPassword.includes(input)){
+    passwordModal.hide();
+    document.getElementById('mainContent').style.display = 'block';
+  } else {
+    document.getElementById('errorMsg').style.display = 'block';
+    document.getElementById('passwordInput').value = '';
+    document.getElementById('passwordInput').focus();
+  }
+}
+
+// Jadwalka functionality
+const colors = {subject:[], teacher:[], time:[]};
+let colorIndex = {subject:0, teacher:0, time:0};
+const colorPool = ["#007bff","#28a745","#dc3545","#fd7e14","#20c997","#6610f2","#6f42c1","#e83e8","#6c757d","#198754"];
+const subjectColors={}, teacherColors={}, timeColors={};
+let idCounter = 0;
+
+function getColor(type,key){
+  if(type==='subject'){
+    if(!subjectColors[key]) subjectColors[key]=colorPool[colorIndex.subject++ % colorPool.length];
+    return subjectColors[key];
+  }
+  if(type==='teacher'){
+    if(!teacherColors[key]) teacherColors[key]=colorPool[colorIndex.teacher++ % colorPool.length];
+    return teacherColors[key];
+  }
+  if(type==='time'){
+    const timeKey = key.start+"-"+key.end;
+    if(!timeColors[timeKey]) timeColors[timeKey]=colorPool[colorIndex.time++ % colorPool.length];
+    return timeColors[timeKey];
+  }
+}
+
+function addSchedule(){
+  const subject=document.getElementById("subject").value.trim();
+  const teacher=document.getElementById("teacher").value.trim();
+  const day=document.getElementById("day").value;
+  const start=document.getElementById("start").value;
+  const end=document.getElementById("end").value;
+  if(!subject||!teacher||!day||!start||!end){alert("Fadlan buuxi dhammaan xogta!");return;}
+
+  const scheduleDiv=document.getElementById(day);
+  
+  const rowDiv=document.createElement("div"); rowDiv.className="schedule-row"; rowDiv.id="row-"+idCounter++;
+  const subBox=document.createElement("div"); subBox.className="subject-box"; subBox.style.backgroundColor=getColor('subject',subject); subBox.innerText=subject;
+  const teacherBox=document.createElement("div"); teacherBox.className="teacher-box"; teacherBox.style.backgroundColor=getColor('teacher',teacher); teacherBox.innerText=teacher;
+  const timeBox=document.createElement("div"); timeBox.className="time-box"; timeBox.style.backgroundColor=getColor('time',{start,end}); timeBox.innerText=start+" - "+end;
+
+  const actions=document.createElement("div"); 
+  actions.className="subject-actions no-print"; 
+  actions.innerHTML=`<button class="btn btn-light btn-sm" onclick="editSchedule('${rowDiv.id}')">✏️</button>
+  <button class="btn btn-dark btn-sm" onclick="deleteSchedule('${rowDiv.id}')">🗑️</button>`;
+
+  rowDiv.appendChild(subBox);
+  rowDiv.appendChild(teacherBox);
+  rowDiv.appendChild(timeBox);
+  rowDiv.appendChild(actions);
+
+  const children=Array.from(scheduleDiv.children);
+  let inserted=false;
+  for(let i=0;i<children.length;i++){
+    const c=children[i];
+    const t=c.querySelector(".time-box").innerText.split(" - ")[0];
+    if(start<t){
+      scheduleDiv.insertBefore(rowDiv,c);
+      inserted=true; break;
+    }
+  }
+  if(!inserted) scheduleDiv.appendChild(rowDiv);
+
+  document.getElementById("subject").value="";
+  document.getElementById("teacher").value="";
+  document.getElementById("day").value="";
+  document.getElementById("start").value="";
+  document.getElementById("end").value="";
+}
+
+function deleteSchedule(id){document.getElementById(id).remove();}
+
+function editSchedule(id){
+  const row=document.getElementById(id);
+  const boxes=row.children;
+  const newSubject=prompt("Maadada cusub:",boxes[0].innerText);
+  const newTeacher=prompt("Macalinka cusub:",boxes[1].innerText);
+  const oldTime=boxes[2].innerText.split(" - ");
+  const newStart=prompt("Bilow cusub:",oldTime[0]);
+  const newEnd=prompt("Dhammaad cusub:",oldTime[1]);
+  if(newSubject && newTeacher && newStart && newEnd){
+    boxes[0].innerText=newSubject;
+    boxes[0].style.backgroundColor=getColor('subject',newSubject);
+    boxes[1].innerText=newTeacher;
+    boxes[1].style.backgroundColor=getColor('teacher',newTeacher);
+    boxes[2].innerText=newStart+" - "+newEnd;
+    boxes[2].style.backgroundColor=getColor('time',{start:newStart,end:newEnd});
+
+    const parent=row.parentElement;
+    parent.removeChild(row);
+    const children=Array.from(parent.children);
+    let inserted=false;
+    for(let i=0;i<children.length;i++){
+      const c=children[i];
+      const t=c.querySelector(".time-box").innerText.split(" - ")[0];
+      if(newStart<t){parent.insertBefore(row,c); inserted=true; break;}
+    }
+    if(!inserted) parent.appendChild(row);
+  }
+}
+</script>
+
+</body>
+</html>
